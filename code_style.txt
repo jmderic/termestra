@@ -1,0 +1,10 @@
+black works with isort and flake8 by following advice here:
+
+https://github.com/psf/black/blob/main/docs/guides/using_black_with_other_tools.md
+
+and running in this order (output elided):
+
+(pty_libtmux) [jmark@Dell-ubu20 pty_libtmux]$ isort .
+(pty_libtmux) [jmark@Dell-ubu20 pty_libtmux]$ black .
+(pty_libtmux) [jmark@Dell-ubu20 pty_libtmux]$ flake8 .
+(pty_libtmux) [jmark@Dell-ubu20 pty_libtmux]$ 

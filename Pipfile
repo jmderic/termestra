@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+libtmux = "*"
+click = "*"
+
+[dev-packages]
+flake8 = "*"
+isort = "*"
+black = "*"
+flake8-bugbear = "*"
+
+[pipenv]
+#allow_prereleases = true
+
+[requires]
+#python_version = "3.8"
