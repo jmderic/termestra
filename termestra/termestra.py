@@ -5,6 +5,8 @@ import asyncio
 import logging
 import sys
 from functools import wraps
+from os import getpid
+from pathlib import Path
 
 import click
 from tmx_util.app import AppBase
@@ -74,8 +76,11 @@ def coro(f):
 @coro
 async def base(**args):
     # setup the output file prefix
+    basefn_prefix = f'{args["wrk_stub"]}-{sys.argv[1]}'
+    pid_file = Path(f"{basefn_prefix}.pid")
     ts = get_timestamp()
-    wrkfn_prefix = f'{args["wrk_stub"]}-{sys.argv[1]}-{ts}'
+    pid_file.write_text(f"{getpid()}\n{ts}")
+    wrkfn_prefix = f"{basefn_prefix}-{ts}"
     log_lvl_str = args["log_level"]
 
     logger = setup_logging(log_lvl_str, wrkfn_prefix)
@@ -88,6 +93,7 @@ async def base(**args):
     except Exception:
         logger.exception(f'Exception in "{sys.argv[0]} {sys.argv[1]}"')
         rv = 99
+    pid_file.unlink()
     return rv
 
 
