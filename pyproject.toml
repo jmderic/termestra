@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "termestra"
+description = "Termestra Terminal Orchestrator"
+authors = [
+    {name = "Mark Deric", email = "codesmith@dericnet.com"},
+]
+keywords = ["gnome-terminal", "tmux", "libtmux", "terminal automation"]
+dependencies = [
+    "click",
+    "libtmux",
+]
+dynamic = ["version", "readme"]
+
+[project.scripts]
+termestra = "termestra.termestra:cli"
+termestra_test = "termestra.line_test:main"
+
+[tool.setuptools.packages]
+find = {namespaces = false}
+
+[tool.setuptools.dynamic]
+version = {file = "termestra/VERSION"}
+readme = {file = "README.rst"}

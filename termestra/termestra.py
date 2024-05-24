@@ -9,9 +9,10 @@ from os import getpid
 from pathlib import Path
 
 import click
-from tmx_util.app import AppBase
-from tmx_util.misc import UsecFormatter, get_timestamp
-from tmx_util.tmux import TmuxMgr
+
+from .tmx_util.app import AppBase
+from .tmx_util.misc import UsecFormatter, get_timestamp
+from .tmx_util.tmux import TmuxMgr
 
 
 @click.group()

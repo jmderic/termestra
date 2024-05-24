@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8; fill-column: 88 -*-
+
+# this file is a knock off of the file setuptools creates when you specify an entry
+# point, with some minor tweaks
+import re
+import sys
+
+from termestra.termestra import cli
+
+if __name__ == '__main__':
+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
+    sys.exit(cli())
