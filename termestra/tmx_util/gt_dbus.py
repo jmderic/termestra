@@ -1,9 +1,12 @@
 # -*- coding: utf-8; fill-column: 88 -*-
 
+import logging
 import os
 import re
 
 from .misc import run_cmd
+
+logger = logging.getLogger(__name__)
 
 
 class DBus:
@@ -41,7 +44,9 @@ class GnomeTerm:
     def get_environ(self):
         environ = os.environ
         node_list = self.dbus_gt.get_node_list()
-        environ["GNOME_TERMINAL_SCREEN"] = f"/org/gnome/Terminal/screen/{node_list[0]}"
+        gts = f"/org/gnome/Terminal/screen/{node_list[0]}"
+        environ["GNOME_TERMINAL_SCREEN"] = gts
+        logger.debug(f"GnomeTerm get_environ() GNOME_TERMINAL_SCREEN={gts}")
         return environ
 
     def create_tmux_window(self, geom, name):

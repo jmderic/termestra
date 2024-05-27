@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class TmuxSession:
     def __init__(self, name, session):
         self.name = name
-        self.sess = session
+        self.sess = session  # libtmux session object
         self.pane = self.sess.active_pane
 
     def send_cmd(self, cmd):
@@ -22,16 +22,16 @@ class TmuxSession:
 
 
 class TmuxMgr:
-    def __init__(self, geom, session_names):
+    def __init__(self, geom, sess_names):
         self.svr = libtmux.Server()
         self.gt = GnomeTerm()
         self.geom = geom
         self.last_session = None
         self.tmux_session_map = {}
-        for session_name in session_names:
-            if session_name in self.tmux_session_map:
-                raise TermestratorError(f"Duplicate session name: {session_name}")
-            self.tmux_session_map[session_name] = None
+        for sess_name in sess_names:
+            if sess_name in self.tmux_session_map:
+                raise TermestratorError(f"Duplicate session name: {sess_name}")
+            self.tmux_session_map[sess_name] = None
 
     def get_new_session(self, start_sessions):
         """! Gets the newly created session and insures it is ready to be used.
@@ -75,16 +75,31 @@ class TmuxMgr:
 
         return new_sessions[0]
 
-    def add_session(self, name):
-        if name not in self.tmux_session_map:
-            raise TermestratorError(f"Can not add unknown session: {name}")
+    def add_session(self, sess_name):
+        if sess_name not in self.tmux_session_map:
+            raise TermestratorError(f"Can not add unknown session: {sess_name}")
         start_sessions = self.svr.sessions
         if self.last_session is None:
-            self.gt.create_tmux_window(self.geom, name)
+            self.gt.create_tmux_window(self.geom, sess_name)
         else:
-            cmd = self.gt.get_create_tmux_tab_command(name)
+            cmd = self.gt.get_create_tmux_tab_command(sess_name)
             self.last_session.send_cmd(cmd)
         new_session = self.get_new_session(start_sessions)
-        self.last_session = TmuxSession(name, new_session)
-        self.tmux_session_map[name] = self.last_session
-        logger.info(f'TmuxMgr.add_session() adds {new_session} named "{name}"')
+        self.last_session = TmuxSession(sess_name, new_session)
+        self.tmux_session_map[sess_name] = self.last_session
+        logger.info(f'TmuxMgr.add_session() adds {new_session} named "{sess_name}"')
+        return self.last_session
+
+    def get_session(self, sess_name):
+        # this function is not intended to create a new tmux_session_map entry
+        if sess_name not in self.tmux_session_map:
+            raise TermestratorError(f"get_session called for unknown name: {sess_name}")
+        return self.tmux_session_map[sess_name]
+
+    def get_num(self, sess_name):
+        tms = self.get_session(sess_name)
+        return int(tms.sess.id[1:])
+
+    def send_cmd(self, sess_name, cmd):
+        tms = self.get_session(sess_name)
+        tms.send_cmd(cmd)
