@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8; fill-column: 88 -*-
 
 import asyncio
@@ -142,7 +141,3 @@ def tmux(**args):
         tmux_mgr.add_session(tab_name)
 
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(cli(standalone_mode=False))
