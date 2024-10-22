@@ -1,5 +1,6 @@
 # -*- coding: utf-8; fill-column: 88 -*-
 
+import copy
 import logging
 import os
 import re
@@ -39,19 +40,19 @@ class DBus:
 
 class GnomeTerm:
     def __init__(self):
-        self.dbus_gt = DBus()
-
-    def get_environ(self):
-        environ = os.environ
-        node_list = self.dbus_gt.get_node_list()
-        gts = f"/org/gnome/Terminal/screen/{node_list[0]}"
-        environ["GNOME_TERMINAL_SCREEN"] = gts
-        logger.debug(f"GnomeTerm get_environ() GNOME_TERMINAL_SCREEN={gts}")
-        return environ
+        # self.gts[0] will be the suffix to "/org/gnome/Terminal/screen/"
+        self.gts = None
 
     def create_tmux_window(self, geom, name):
+        environ = copy.deepcopy(os.environ)
+        environ["GNOME_TERMINAL_SCREEN"] = ""
         cmd = f'gnome-terminal --window -t "{name}" --geometry={geom} -e tmux'
-        run_cmd(cmd, env=self.get_environ())
+        dbus_gt = DBus()
+        before = dbus_gt.get_node_list()
+        run_cmd(cmd, env=environ)
+        after = dbus_gt.get_node_list()
+        self.gts = frozenset(after) - frozenset(before)
+        logger.debug(f"The new GNOME_TERMINAL_SCREEN uid is in the set {self.gts}")
 
     def get_create_tmux_tab_command(self, name):
         # 2> /dev/null gets rid of the -e deprecation warning
