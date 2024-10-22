@@ -167,6 +167,7 @@ class AppBase:
                 tms = self.tmux_mgr.get_session(sess_name)
                 if not tms.transport.is_closing():
                     tms.transport.close()
+                os.remove(tms.pipe)
             for sig in self.sigs:
                 self.loop.remove_signal_handler(sig)
             self.done = True
@@ -202,23 +203,23 @@ class AppBase:
 
 
 class AppBasePipeReadProto(asyncio.protocols.Protocol):
-    def __init__(self, app, sess_name):
-        self.app = app
+    def __init__(self, base, sess_name):
+        self.base = base
         self.sess_name = sess_name
 
     def connection_made(self, transport):
-        self.app.connection_made(self.sess_name, transport)
+        self.base.connection_made(self.sess_name, transport)
 
     def __repr__(self):
         return (
-            f"<{self.__class__.__name__} app={self.app!r} sess_name={self.sess_name}>"
+            f"<{self.__class__.__name__} base={self.base!r} sess_name={self.sess_name}>"
         )
 
     def connection_lost(self, exc):
-        self.app.connection_lost(self.sess_name, exc)
+        self.base.connection_lost(self.sess_name, exc)
 
     def data_received(self, data):
-        self.app.data_received(self.sess_name, data)
+        self.base.data_received(self.sess_name, data)
 
     def eof_received(self):
         return False
