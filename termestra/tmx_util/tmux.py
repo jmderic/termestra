@@ -48,12 +48,12 @@ class TmuxMgr:
 
         now_sessions = self.svr.sessions
         new_count = len(now_sessions) - start_count
-        logger.debug(f"Creating session {start_count + 1}; new_count {new_count}")
+        logger.debug(f"TMTR: Create session {start_count + 1}; {new_count=}")
         while new_count < 1:
             time.sleep(0.1)
             now_sessions = self.svr.sessions
             new_count = len(now_sessions) - start_count
-            logger.debug(f"Creating session {start_count + 1}; new_count {new_count}")
+            logger.debug(f"TMTR: Create session {start_count + 1}; {new_count=}")
 
         new_sessions = []
         for session in now_sessions:
@@ -67,11 +67,11 @@ class TmuxMgr:
             )
 
         pane_size = len(new_sessions[0].active_pane.capture_pane())
-        logger.debug(f"Creating session {start_count + 1}; pane_size {pane_size}")
+        logger.debug(f"TMTR: Create session {start_count + 1}; {pane_size=}")
         while pane_size == 0:
             time.sleep(0.1)
             pane_size = len(new_sessions[0].active_pane.capture_pane())
-            logger.debug(f"Creating session {start_count + 1}; pane_size {pane_size}")
+            logger.debug(f"TMTR: Create session {start_count + 1}; {pane_size=}")
 
         return new_sessions[0]
 
@@ -87,13 +87,13 @@ class TmuxMgr:
         new_session = self.get_new_session(start_sessions)
         self.last_session = TmuxSession(sess_name, new_session)
         self.tmux_session_map[sess_name] = self.last_session
-        logger.info(f'TmuxMgr.add_session() adds {new_session} named "{sess_name}"')
+        logger.info(f"TMTR: TmuxMgr.add_session() adds {new_session} {sess_name=}")
         return self.last_session
 
     def get_session(self, sess_name):
         # this function is not intended to create a new tmux_session_map entry
         if sess_name not in self.tmux_session_map:
-            raise TermestratorError(f"get_session called for unknown name: {sess_name}")
+            raise TermestratorError(f"get_session called for unknown {sess_name=}")
         return self.tmux_session_map[sess_name]
 
     def get_num(self, sess_name):

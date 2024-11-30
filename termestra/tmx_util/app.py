@@ -50,7 +50,7 @@ class AppBase:
                 f"${sess_num}:0",
                 f"cat > {tms.pipe}",
             ]
-            logger.debug(f"pipe_pane_cmd: {pipe_pane_cmd}")
+            logger.debug(f"TMTR: {pipe_pane_cmd=}")
             run_cmd(pipe_pane_cmd)
             # add pipe's transport to the TmuxSession object
             tms.transport = None
@@ -67,23 +67,23 @@ class AppBase:
         return tp
 
     def connection_made(self, sess_name, transport):
-        logger.info(f"connection_made: '{sess_name}' with transport {transport!r}")
+        logger.info(f"TMTR: connection_made: {sess_name=} with {transport=!r}")
         if self.app:
             self.app.conn_made(sess_name)
 
     def connection_lost(self, sess_name, exc):
-        logger.info(f"connection_lost: '{sess_name}'")
+        logger.info(f"TMTR: connection_lost: {sess_name=}")
         if self.app:
             self.app.conn_lost(sess_name, exc)
 
     def data_received(self, sess_name, data):
         d_siz = len(data)
         tms = self.tmux_mgr.get_session(sess_name)
-        logger.debug(f"data_received '{sess_name}'")
+        logger.debug(f"TMTR: data_received {sess_name=}")
         now = time()
 
         if tms.cmd_start_time is None:
-            logger.debug(f"cmd_start_time set, '{sess_name}'")
+            logger.debug(f"TMTR: cmd_start_time set {sess_name=}")
             tms.cmd_start_time = now
 
         get_start = 0
@@ -95,8 +95,8 @@ class AppBase:
             b_room = self.b_siz - tms.b_start
             end = tms.b_start + (b_room if d_siz > b_room else d_siz)
             logger.debug(
-                f"recv_loop get_start: {get_start}; d_siz: {d_siz}; "
-                f"b_start: {tms.b_start}; b_room: {b_room}; end: {end}"
+                f"TMTR: recv_loop {get_start=}; {d_siz=}; "
+                f"{tms.b_start=}; {b_room=}; {end=}"
             )
             if d_siz > b_room:
                 tms.line_buffer[tms.b_start :] = data[get_start : get_start + b_room]
@@ -126,8 +126,7 @@ class AppBase:
                 if data_fits:
                     # output, potentially followed by a command prompt
                     logger.debug(
-                        f"cmd_start_time reset, '{sess_name}'; "
-                        f"resid bytes: {residual_siz}"
+                        f"TMTR: cmd_start_time reset, {sess_name=}; " f"{residual_siz=}"
                     )
                     tms.cmd_start_time = None
                     break
@@ -137,8 +136,8 @@ class AppBase:
                     if tms.b_start == 0:
                         # potentially a command prompt
                         logger.debug(
-                            f"cmd_start_time reset, '{sess_name}'; "
-                            f"add {d_siz} bytes at buffer start"
+                            f"TMTR: cmd_start_time reset, {sess_name=}; "
+                            f"add {d_siz=} bytes at buffer start"
                         )
                         tms.cmd_start_time = None
                     tms.b_start += d_siz
@@ -148,21 +147,19 @@ class AppBase:
                     self.data_to_app(sess_name, lines, now - tms.cmd_start_time)
 
     def data_to_app(self, sess_name, lines, cmd_time):
-        logger.debug(
-            f"data_to_app '{sess_name}' -- cmd_time: {cmd_time}; lines: {lines}"
-        )
+        logger.debug(f"TMTR: data_to_app {sess_name=}; {cmd_time=}; {lines=}")
         if self.app:
             self.app.data_recv(sess_name, lines, cmd_time)
 
     def send_cmd(self, sess_name, cmd):
-        logger.debug(f"send_cmd '{sess_name}' -- '{cmd}'")
+        logger.debug(f"TMTR: send_cmd {sess_name=}; {cmd=}")
         self.tmux_mgr.send_cmd(sess_name, cmd)
 
     def housekeeping(self):
         if self.app:
             self.app.housekeeping()  # return value to control behaviors below?
         if self.halt:
-            logger.debug("housekeeping called to halt")
+            logger.debug("TMTR: housekeeping called to halt")
             for sess_name in self.tmux_mgr.tmux_session_map:
                 tms = self.tmux_mgr.get_session(sess_name)
                 if not tms.transport.is_closing():
@@ -177,11 +174,11 @@ class AppBase:
         self.loop.call_at(self.next_time, self.housekeeping)
 
     def handle_sig(self, sig):
-        logger.info(f"handle_sig: {Signals(sig).name}")
+        logger.info(f"TMTR: handle_sig: {Signals(sig).name=}")
         self.halt = True
 
     async def run(self):
-        logger.info("AppBase run")
+        logger.info("TMTR: AppBase run")
         self.loop = asyncio.get_event_loop()
         self.loop.set_debug(True if self.loglevel == "DEBUG" else False)
         for sess_name in self.tmux_mgr.tmux_session_map:

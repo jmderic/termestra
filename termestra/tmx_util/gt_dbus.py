@@ -52,7 +52,7 @@ class GnomeTerm:
         run_cmd(cmd, env=environ)
         after = dbus_gt.get_node_list()
         self.gts = frozenset(after) - frozenset(before)
-        logger.debug(f"The new GNOME_TERMINAL_SCREEN uid is in the set {self.gts}")
+        logger.debug(f"TMTR: New GNOME_TERMINAL_SCREEN uid is in the set {self.gts=}")
 
     def get_create_tmux_tab_command(self, name):
         # 2> /dev/null gets rid of the -e deprecation warning
