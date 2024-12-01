@@ -4,8 +4,8 @@ import asyncio
 import logging
 import os
 from functools import partial
+from io import BytesIO
 from signal import SIGINT, SIGTERM, Signals
-from time import time
 
 from . import tmux
 from .misc import run_cmd
@@ -54,11 +54,9 @@ class AppBase:
             run_cmd(pipe_pane_cmd)
             # add pipe's transport to the TmuxSession object
             tms.transport = None
-            # add data_received line buffering support to the TmuxSession object
-            # (revisit memoryview buffering)
-            tms.cmd_start_time = None
-            tms.line_buffer = memoryview(bytearray(self.b_siz))
-            tms.b_start = 0
+            # add data_received handling support to the TmuxSession object
+            tms.line_buffer = BytesIO()
+            tms.next_line_pos = 0
 
     async def _connect_pipe(self, sess_name, pipe):
         tp = await self.loop.connect_read_pipe(
@@ -77,79 +75,29 @@ class AppBase:
             self.app.conn_lost(sess_name, exc)
 
     def data_received(self, sess_name, data):
-        d_siz = len(data)
+        logger.debug(f"TMTR: data_received {sess_name=}; {data=}")
         tms = self.tmux_mgr.get_session(sess_name)
-        logger.debug(f"TMTR: data_received {sess_name=}")
-        now = time()
 
-        if tms.cmd_start_time is None:
-            logger.debug(f"TMTR: cmd_start_time set {sess_name=}")
-            tms.cmd_start_time = now
+        tms.line_buffer.write(data)
 
-        get_start = 0
-        b_room = None
-        while True:
-            # FIXME: this chokes on number of copies made
-            if get_start:
-                d_siz -= b_room
-            b_room = self.b_siz - tms.b_start
-            end = tms.b_start + (b_room if d_siz > b_room else d_siz)
-            logger.debug(
-                f"TMTR: recv_loop {get_start=}; {d_siz=}; "
-                f"{tms.b_start=}; {b_room=}; {end=}"
-            )
-            if d_siz > b_room:
-                tms.line_buffer[tms.b_start :] = data[get_start : get_start + b_room]
-                get_start += b_room
-                data_fits = False
-            else:
-                tms.line_buffer[tms.b_start : end] = data[get_start:]
-                data_fits = True
+        tms.line_buffer.seek(tms.next_line_pos)
+        stub = tms.line_buffer.read()
+        lines = []
+        last_crlf = stub.rfind(b"\r\n")
+        if last_crlf != -1:
+            tms.next_line_pos += last_crlf + 2
+            lines = stub[:last_crlf].split(b"\r\n")
+            stub = stub[last_crlf + 2 :]
+        logger.debug(
+            f"TMTR: data_received {sess_name=}; {tms.next_line_pos=}; "
+            f"{tms.line_buffer.tell()=}"
+        )
+        self.data_to_app(sess_name, lines, stub)
 
-            snippet = bytes(tms.line_buffer[:end])
-            # lines is a copy out split on CRLF
-            lines = snippet.split(b"\r\n")
-            line_count = len(lines)
-            if line_count > 1:
-                # some complete CRLF terminated lines of output
-                residual = lines[line_count - 1]
-                residual_siz = len(residual)
-                if residual_siz > 0:
-                    # with output following the last CRLF
-                    tms.line_buffer[:residual_siz] = residual
-                    lines[line_count - 1] = b""
-                    tms.b_start = residual_siz
-                else:
-                    # ending in a CRLF
-                    tms.b_start = 0
-                self.data_to_app(sess_name, lines, now - tms.cmd_start_time)
-                if data_fits:
-                    # output, potentially followed by a command prompt
-                    logger.debug(
-                        f"TMTR: cmd_start_time reset, {sess_name=}; " f"{residual_siz=}"
-                    )
-                    tms.cmd_start_time = None
-                    break
-            else:
-                # no complete lines; only one partial line with no \r\n, CRLF
-                if data_fits:
-                    if tms.b_start == 0:
-                        # potentially a command prompt
-                        logger.debug(
-                            f"TMTR: cmd_start_time reset, {sess_name=}; "
-                            f"add {d_siz=} bytes at buffer start"
-                        )
-                        tms.cmd_start_time = None
-                    tms.b_start += d_siz
-                    break
-                else:
-                    tms.b_start = 0
-                    self.data_to_app(sess_name, lines, now - tms.cmd_start_time)
-
-    def data_to_app(self, sess_name, lines, cmd_time):
-        logger.debug(f"TMTR: data_to_app {sess_name=}; {cmd_time=}; {lines=}")
+    def data_to_app(self, sess_name, lines, stub):
+        logger.debug(f"TMTR: data_to_app {sess_name=}; {lines=}; {stub=}")
         if self.app:
-            self.app.data_recv(sess_name, lines, cmd_time)
+            self.app.data_recv(sess_name, lines, stub)
 
     def send_cmd(self, sess_name, cmd):
         logger.debug(f"TMTR: send_cmd {sess_name=}; {cmd=}")
