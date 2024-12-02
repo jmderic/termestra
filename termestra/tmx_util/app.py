@@ -18,12 +18,12 @@ class AppBase:
     # AppBase obtain any other tms info by calling self.tmux_mgr.get_<what_we_need>();
     # so tms is an opaque container
     def __init__(
-        self, geom, tab_name_list, wrk_stub, loglevel, housekeeping_interval=5, app=None
+        self, geom, tab_name_list, wrk_stub, loglevel, housekeeping_interval=1, app=None
     ):
         self.tmux_mgr = tmux.TmuxMgr(geom, tab_name_list)
         self.loglevel = loglevel
         self.loop = None
-        self.housekeeping_interval = 5
+        self.housekeeping_interval = housekeeping_interval
         self.sigs = (SIGINT, SIGTERM)
         self.halt = False  # stop requested
         self.done = False  # stop procedures complete
