@@ -24,6 +24,7 @@ class AppBase:
         self.loglevel = loglevel
         self.loop = None
         self.housekeeping_interval = housekeeping_interval
+        self.housekeeping_counter = 0
         self.sigs = (SIGINT, SIGTERM)
         self.halt = False  # stop requested
         self.done = False  # stop procedures complete
@@ -57,6 +58,8 @@ class AppBase:
             # add data_received handling support to the TmuxSession object
             tms.line_buffer = BytesIO()
             tms.next_line_pos = 0
+            tms.anti_chatter = 0
+            tms.stub = b""
 
     async def _connect_pipe(self, sess_name, pipe):
         tp = await self.loop.connect_read_pipe(
@@ -88,14 +91,19 @@ class AppBase:
             tms.next_line_pos += last_crlf + 2
             lines = stub[:last_crlf].split(b"\r\n")
             stub = stub[last_crlf + 2 :]
+            self.data_to_app(sess_name, lines, stub)
+        else:
+            tms.stub = stub
         logger.debug(
             f"TMTR: data_received {sess_name=}; {tms.next_line_pos=}; "
             f"{tms.line_buffer.tell()=}"
         )
-        self.data_to_app(sess_name, lines, stub)
 
     def data_to_app(self, sess_name, lines, stub):
         logger.debug(f"TMTR: data_to_app {sess_name=}; {lines=}; {stub=}")
+        tms = self.tmux_mgr.get_session(sess_name)
+        tms.anti_chatter = self.housekeeping_counter
+        tms.stub = b""
         if self.app:
             self.app.data_recv(sess_name, lines, stub)
 
@@ -117,6 +125,12 @@ class AppBase:
                 self.loop.remove_signal_handler(sig)
             self.done = True
             return
+        for sess_name in self.tmux_mgr.tmux_session_map:
+            tms = self.tmux_mgr.get_session(sess_name)
+            if tms.stub and tms.anti_chatter != self.housekeeping_counter:
+                logger.debug(f"TMTR: housekeeping pushes stub to {sess_name=}")
+                self.data_to_app(sess_name, [], tms.stub)
+        self.housekeeping_counter += 1
 
         self.next_time += self.housekeeping_interval
         self.loop.call_at(self.next_time, self.housekeeping)
