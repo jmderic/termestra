@@ -90,8 +90,12 @@ class AppBase:
         if last_crlf != -1:
             tms.next_line_pos += last_crlf + 2
             lines = stub[:last_crlf].split(b"\r\n")
-            stub = stub[last_crlf + 2 :]
-            self.data_to_app(sess_name, lines, stub)
+            new_stub = stub[last_crlf + 2 :]
+            logger.debug(
+                f"TMTR: data_received {sess_name=}; {stub=}; {last_crlf=}; "
+                f"{lines=}; {new_stub=}"
+            )
+            self.data_to_app(sess_name, lines, new_stub)
         else:
             tms.stub = stub
         logger.debug(
